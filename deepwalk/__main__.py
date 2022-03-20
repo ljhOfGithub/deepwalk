@@ -10,10 +10,10 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 import logging
 
-from . import graph
-from . import walks as serialized_walks
+import graph
+import walks as serialized_walks
 from gensim.models import Word2Vec
-from .skipgram import Skipgram
+from skipgram import Skipgram
 
 from six import text_type as unicode
 from six import iteritems
@@ -47,7 +47,10 @@ def debug(type_, value, tb):
 
 
 def process(args):
-
+  import pdb
+  # pdb.set_trace()
+  #args = Namespace(debug=False, format='adjlist', input='karate.adjlist', log='INFO', matfile_variable_name='network',
+  #max_memory_data_size=1000000000, number_walks=10, output='karate.embeddings', representation_size=64, seed=0, undirected=True, vertex_freq_degree=False, walk_length=40, window_size=5, workers=1)
   if args.format == "adjlist":
     G = graph.load_adjacencylist(args.input, undirected=args.undirected)
   elif args.format == "edgelist":
@@ -56,23 +59,27 @@ def process(args):
     G = graph.load_matfile(args.input, variable_name=args.matfile_variable_name, undirected=args.undirected)
   else:
     raise Exception("Unknown file format: '%s'.  Valid formats: 'adjlist', 'edgelist', 'mat'" % args.format)
-
+  # pdb.set_trace()
   print("Number of nodes: {}".format(len(G.nodes())))
 
-  num_walks = len(G.nodes()) * args.number_walks
+  num_walks = len(G.nodes()) * args.number_walks#10
 
   print("Number of walks: {}".format(num_walks))
 
-  data_size = num_walks * args.walk_length
+  data_size = num_walks * args.walk_length#40
 
   print("Data size (walks*length): {}".format(data_size))
 
   if data_size < args.max_memory_data_size:
     print("Walking...")
+    pdb.set_trace()
     walks = graph.build_deepwalk_corpus(G, num_paths=args.number_walks,
                                         path_length=args.walk_length, alpha=0, rand=random.Random(args.seed))
-    print("Training...")
-    model = Word2Vec(walks, size=args.representation_size, window=args.window_size, min_count=0, sg=1, hs=1, workers=args.workers)
+    print("Training...")#window_size=5,representation_size=64，sg：Training algorithm: 1 for skip-gram; otherwise CBOW.
+    #If 1, hierarchical softmax will be used for model training.
+            #If 0, and `negative` is non-zero, negative sampling will be used.
+    #representation_size:词向量的维度
+    model = Word2Vec(walks, size=args.representation_size, window=args.window_size, min_count=0, sg=1, hs=1, workers=args.workers)#worker1=1
   else:
     print("Data size {} is larger than limit (max-memory-data-size: {}).  Dumping walks to disk.".format(data_size, args.max_memory_data_size))
     print("Walking...")
@@ -95,7 +102,9 @@ def process(args):
                      size=args.representation_size,
                      window=args.window_size, min_count=0, trim_rule=None, workers=args.workers)
 
-  model.wv.save_word2vec_format(args.output)
+  model.wv.save_word2vec_format(args.output)#args.output:args = Namespace(debug=False, format='adjlist', input='karate.adjlist', log='INFO',
+  # matfile_variable_name='network', max_memory_data_size=1000000000, number_walks=10, output='karate.embeddings', representation_size=64,
+  # seed=0, undirected=True, vertex_freq_degree=False, walk_length=40, window_size=5, workers=1)
 
 
 def main():
